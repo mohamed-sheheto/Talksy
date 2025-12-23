@@ -11,21 +11,18 @@ const userNameSpan = document.getElementById("userName");
 const loginErrorDiv = document.getElementById("loginError");
 const signupErrorDiv = document.getElementById("signupError");
 
-const clearErrors = () => {
-  loginErrorDiv.textContent = "";
-  signupErrorDiv.textContent = "";
-};
-
 const switchToSignup = function () {
   signupForm.classList.add("active");
   loginForm.classList.remove("active");
-  clearErrors();
+  loginErrorDiv.textContent = "";
+  signupErrorDiv.textContent = "";
 };
 
 const switchToLogin = function () {
   signupForm.classList.remove("active");
   loginForm.classList.add("active");
-  clearErrors();
+  signupErrorDiv.textContent = "";
+  loginErrorDiv.textContent = "";
 };
 
 const showHomePage = function (user) {
@@ -149,7 +146,7 @@ const checkAuthStatus = async function () {
     }
     switchToLogin();
   } catch (err) {
-    console.error("Auth check error:", err);
+    console.log("Not Authenticated");
     switchToLogin();
   }
 };
