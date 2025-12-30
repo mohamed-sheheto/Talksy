@@ -5,7 +5,7 @@ exports.createRoom = async function (req, res, next) {
     const { name, description, isPrivate } = req.body;
 
     const roomData = {
-      name,
+      name: name.trim(),
       creator: req.user._id,
       isPrivate,
       description: description || "",
@@ -20,26 +20,24 @@ exports.createRoom = async function (req, res, next) {
       room: newRoom,
     });
   } catch (err) {
-    console.error("create Room error", err);
+    console.error("createRoom error:", err);
     next(err);
   }
 };
 
 exports.getRooms = async function (req, res, next) {
   try {
-    let query = { isPrivate: false };
-
-    if (req.user) {
-      query = {
-        $or: [
-          { isPrivate: false },
-          {
-            isPrivate: true,
-            members: req.user._id,
-          },
-        ],
-      };
-    }
+    const query = req.user
+      ? {
+          $or: [
+            { isPrivate: false },
+            {
+              isPrivate: true,
+              members: req.user._id,
+            },
+          ],
+        }
+      : { isPrivate: false };
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
@@ -67,10 +65,137 @@ exports.getRooms = async function (req, res, next) {
   }
 };
 
-exports.getRoom = async function (req, res, next) {};
+exports.getRoom = async function (req, res, next) {
+  try {
+    const room = await Room.findById(req.params.id);
 
-// getRooms - Get list of public rooms (or user's rooms if authenticated)
-// getRoom - Get single room details with members
-// joinRoom - Add user to room members
-// leaveRoom - Remove user from room members
-// deleteRoom - Delete room (creator only)
+    if (!room) {
+      return res.status(404).json({
+        status: "error",
+        message: "Room not found",
+      });
+    }
+
+    if (room.isPrivate) {
+      const isMember = room.members.some((member) =>
+        member._id.equals(req.user._id)
+      );
+
+      if (!isMember) {
+        return res.status(403).json({
+          status: "error",
+          message: "You do not have access to this private room",
+        });
+      }
+    }
+
+    res.status(200).json({
+      status: "success",
+      room,
+    });
+  } catch (err) {
+    console.error("getRoom error:", err);
+    next(err);
+  }
+};
+
+exports.deleteRoom = async function (req, res, next) {
+  try {
+    const room = await Room.findById(req.params.id);
+    if (!room) {
+      return res.status(404).json({
+        status: "error",
+        message: "Room not found",
+      });
+    }
+
+    if (!room.creator._id.equals(req.user._id)) {
+      return res.status(403).json({
+        status: "error",
+        message: "You can't delete this room",
+      });
+    }
+
+    await Room.deleteOne({ _id: room._id });
+    res.status(204).send();
+  } catch (err) {
+    console.error("deleteRoom error:", err);
+    next(err);
+  }
+};
+
+exports.joinRoom = async function (req, res, next) {
+  try {
+    const roomToJoin = await Room.findById(req.params.id);
+
+    if (!roomToJoin) {
+      return res.status(404).json({
+        status: "error",
+        message: "Room not found",
+      });
+    }
+
+    if (roomToJoin.isPrivate) {
+      return res.status(403).json({
+        status: "error",
+        message: "Cannot join a private room directly.",
+      });
+    }
+
+    const room = await Room.findByIdAndUpdate(
+      req.params.id,
+      { $addToSet: { members: req.user._id } },
+      { new: true }
+    );
+
+    if (!room) {
+      return res
+        .status(404)
+        .json({ status: "error", message: "Room not found during update." });
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Successfully joined the room.",
+      room,
+    });
+  } catch (err) {
+    console.error("joinRoom error:", err);
+    next(err);
+  }
+};
+exports.leaveRoom = async function (req, res, next) {
+  try {
+    const roomToLeave = await Room.findById(req.params.id);
+    if (!roomToLeave) {
+      return res.status(404).json({
+        status: "error",
+        message: "Room not found",
+      });
+    }
+
+    if (roomToLeave.creator._id.equals(req.user._id)) {
+      return res.status(400).json({
+        status: "error",
+        message:
+          "The creator of the room cannot leave. Please delete the room instead.",
+      });
+    }
+
+    await Room.findByIdAndUpdate(
+      req.params.id,
+      {
+        $pull: { members: req.user._id },
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Successfully left the room.",
+    });
+  } catch (err) {
+    console.error("leaveRoom error:", err);
+    next(err);
+  }
+};
