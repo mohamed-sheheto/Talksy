@@ -41,11 +41,24 @@ exports.getRooms = async function (req, res, next) {
       };
     }
 
-    const rooms = await Room.find(query).sort({ createdAt: -1 });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const totalRooms = await Room.countDocuments(query);
+
+    const rooms = await Room.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalRooms / limit);
 
     res.status(200).json({
       status: "success",
       results: rooms.length,
+      page,
+      totalPages,
       rooms,
     });
   } catch (err) {
