@@ -1,167 +1,172 @@
-(function () {
-  // Minimal, refactored frontend logic for auth UI
-  const qs = (s) => document.querySelector(s);
-  const qsa = (s) => Array.from(document.querySelectorAll(s));
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+const homePage = document.getElementById("homePage");
+const loginFormElement = document.getElementById("loginFormElement");
+const signupFormElement = document.getElementById("signupFormElement");
+const showSignupLink = document.getElementById("showSignup");
+const showLoginLink = document.getElementById("showLogin");
+const googleLoginBtn = document.getElementById("googleLogin");
+const logoutBtn = document.getElementById("logoutBtn");
+const userNameSpan = document.getElementById("userName");
+const loginErrorDiv = document.getElementById("loginError");
+const signupErrorDiv = document.getElementById("signupError");
 
-  const loginForm = qs("#loginForm");
-  const signupForm = qs("#signupForm");
-  const homePage = qs("#homePage");
-  const loginFormElement = qs("#loginFormElement");
-  const signupFormElement = qs("#signupFormElement");
-  const showSignupLink = qs("#showSignup");
-  const showLoginLink = qs("#showLogin");
-  const googleLoginBtn = qs("#googleLogin");
-  const logoutBtn = qs("#logoutBtn");
-  const userNameSpan = qs("#userName");
-  const loginErrorDiv = qs("#loginError");
-  const signupErrorDiv = qs("#signupError");
+const switchToSignup = function () {
+  signupForm.classList.add("active");
+  loginForm.classList.remove("active");
+  loginErrorDiv.textContent = "";
+  signupErrorDiv.textContent = "";
+};
 
-  const setActive = (which) => {
-    loginErrorDiv.textContent = "";
-    signupErrorDiv.textContent = "";
-    if (which === "login") {
-      loginForm.classList.add("active");
-      signupForm.classList.remove("active");
-    } else if (which === "signup") {
-      signupForm.classList.add("active");
-      loginForm.classList.remove("active");
-    }
-  };
+const switchToLogin = function () {
+  signupForm.classList.remove("active");
+  loginForm.classList.add("active");
+  signupErrorDiv.textContent = "";
+  loginErrorDiv.textContent = "";
+};
 
-  const showHome = (user) => {
-    loginForm.classList.remove("active");
-    signupForm.classList.remove("active");
-    if (homePage) homePage.classList.remove("hidden");
-    if (userNameSpan)
-      userNameSpan.textContent = user.username || user.email || "";
-  };
+const showHomePage = function (user) {
+  loginForm.classList.remove("active");
+  signupForm.classList.remove("active");
+  homePage.classList.remove("hidden");
+  userNameSpan.textContent = user.username || user.email;
+};
 
-  async function postJson(url, body) {
-    const res = await fetch(url, {
+showSignupLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  switchToSignup();
+});
+
+showLoginLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  switchToLogin();
+});
+
+loginFormElement.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Logging in...";
+
+  try {
+    const response = await fetch("/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ email, password }),
       credentials: "include",
     });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, data };
-  }
 
-  if (showSignupLink)
-    showSignupLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      setActive("signup");
-    });
-  if (showLoginLink)
-    showLoginLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      setActive("login");
-    });
+    const data = await response.json();
 
-  if (loginFormElement) {
-    loginFormElement.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = e.target.querySelector('button[type="submit"]');
-      const original = btn ? btn.textContent : "";
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Logging in...";
-      }
-
-      const email = (qs("#loginEmail") || {}).value || "";
-      const password = (qs("#loginPassword") || {}).value || "";
-
-      try {
-        const { ok, data } = await postJson("/api/v1/auth/login", {
-          email,
-          password,
-        });
-        if (ok) showHome(data.user || {});
-        else loginErrorDiv.textContent = data.message || "Login failed";
-      } catch (err) {
-        loginErrorDiv.textContent = "Network error. Please try again.";
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = original;
-        }
-      }
-    });
-  }
-
-  if (signupFormElement) {
-    signupFormElement.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = e.target.querySelector('button[type="submit"]');
-      const original = btn ? btn.textContent : "";
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Signing up...";
-      }
-
-      const username = (qs("#signupUsername") || {}).value || "";
-      const email = (qs("#signupEmail") || {}).value || "";
-      const password = (qs("#signupPassword") || {}).value || "";
-
-      try {
-        const { ok, data } = await postJson("/api/v1/auth/signup", {
-          username,
-          email,
-          password,
-        });
-        if (ok) showHome(data.user || {});
-        else signupErrorDiv.textContent = data.message || "Signup failed";
-      } catch (err) {
-        signupErrorDiv.textContent = "Network error. Please try again.";
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = original;
-        }
-      }
-    });
-  }
-
-  if (googleLoginBtn)
-    googleLoginBtn.addEventListener("click", () => {
-      window.location.href = "/api/v1/auth/google";
-    });
-
-  if (logoutBtn)
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await fetch("/api/v1/auth/logout", {
-          method: "POST",
-          credentials: "include",
-        });
-        setActive("login");
-        if (homePage) homePage.classList.add("hidden");
-      } catch (_) {
-        /* ignore */
-      }
-    });
-
-  async function checkAuthStatus() {
-    try {
-      const res = await fetch("/api/v1/auth/", { credentials: "include" });
-      if (!res.ok) return setActive("login");
-      const data = await res.json().catch(() => ({}));
-      if (data.user) return showHome(data.user);
-      setActive("login");
-    } catch (_) {
-      setActive("login");
+    if (response.ok) showHomePage(data.user);
+    else {
+      loginErrorDiv.textContent = data.message || "Login Failed";
     }
+  } catch (err) {
+    loginErrorDiv.textContent = "Network error. Please try again.";
+    console.error("Login error:", err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+});
+
+signupFormElement.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById("signupUsername").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Signing up...";
+
+  try {
+    const response = await fetch("/api/v1/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password }),
+      credentials: "include",
+    });
+
+    const data = await response.json();
+
+    if (response.ok) showHomePage(data.user);
+    else {
+      signupErrorDiv.textContent = data.message || "Signup Failed";
+    }
+  } catch (err) {
+    signupErrorDiv.textContent = "Network error. Please try again.";
+    console.error("Signup error:", err);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+});
+
+googleLoginBtn.addEventListener("click", () => {
+  window.location.href = "/api/v1/auth/google";
+});
+
+logoutBtn.addEventListener("click", async (e) => {
+  try {
+    const response = await fetch("/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      switchToLogin();
+      homePage.classList.add("hidden");
+    }
+  } catch (err) {
+    console.log("logout error:", err);
+  }
+});
+
+const checkAuthStatus = async function () {
+  try {
+    const response = await fetch("/api/v1/auth/", {
+      credentials: "include",
+    });
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.user) {
+        showHomePage(data.user);
+        return;
+      }
+    }
+    switchToLogin();
+  } catch (err) {
+    console.log("Not Authenticated");
+    switchToLogin();
+  }
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  loginForm.classList.remove("active");
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const authStatus = urlParams.get("auth");
+  const error = urlParams.get("error");
+
+  if (authStatus || error) {
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 
-  window.addEventListener("DOMContentLoaded", () => {
-    setActive("login");
-    const params = new URLSearchParams(window.location.search);
-    const authStatus = params.get("auth");
-    const error = params.get("error");
-    if (authStatus === "success") checkAuthStatus();
-    else if (error) {
-      loginErrorDiv.textContent = error;
-      setActive("login");
-    } else checkAuthStatus();
-  });
-})();
+  if (authStatus === "success") checkAuthStatus();
+  else if (error) {
+    loginErrorDiv.textContent = error;
+    switchToLogin();
+  } else {
+    checkAuthStatus();
+  }
+});
