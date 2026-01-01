@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Talksy</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -85,15 +88,64 @@
             <a href="#" id="showLogin">Login</a>
           </p>
         </div>
-
-        <!-- Home Page (shown after login) -->
-        <div id="homePage" class="home-container hidden">
-          <h2>Welcome, <span id="userName"></span>!</h2>
-          <p>You are successfully logged in.</p>
-          <button class="btn btn-secondary" id="logoutBtn">Logout</button>
-        </div>
       </div>
+      <!-- /.auth-container -->
     </div>
+    <!-- /.container -->
+
+    <!-- Chat App (shown after login) -->
+    <div id="chatApp" class="chat-container hidden">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h3>Rooms</h3>
+          <button id="createRoomBtn" class="btn btn-secondary small">
+            + New
+          </button>
+        </div>
+        <ul id="roomsList" class="rooms-list">
+          <li class="room active" data-room="General"># General</li>
+          <li class="room" data-room="Random"># Random</li>
+        </ul>
+        <div class="sidebar-footer">
+          <div class="user-mini">
+            <div class="avatar">U</div>
+            <div class="user-meta">
+              <strong id="userName">User</strong>
+              <button class="btn btn-secondary tiny" id="logoutBtn">
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="chat-main">
+        <div class="chat-header">
+          <h4 id="roomTitle"># General</h4>
+        </div>
+
+        <div id="messagesList" class="messages-list"></div>
+
+        <form id="messageForm" class="message-form">
+          <input
+            id="messageInput"
+            name="message"
+            autocomplete="off"
+            placeholder="Message #General"
+          />
+          <button id="sendBtn" class="btn btn-primary" type="submit">
+            Send
+          </button>
+        </form>
+      </main>
+
+      <aside class="right-panel">
+        <div id="typingIndicator" class="typing-indicator"></div>
+        <h4>Members</h4>
+        <ul id="membersList" class="members-list"></ul>
+      </aside>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="socket.js"></script>
     <script src="script.js"></script>
