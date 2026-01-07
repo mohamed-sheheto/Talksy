@@ -9,7 +9,9 @@ const googleStrategy = require("passport-google-oauth20").Strategy;
 
 const createSendToken = function (user, statusCode, res) {
   if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not defined in environment variables");
+    return next(
+      new AppError("JWT_SECRET is not defined in environment variables")
+    );
   }
 
   user.password = undefined;
@@ -38,26 +40,23 @@ exports.signUp = asyncWrapper(async function (req, res, next) {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
-    return res.status(400).json({
-      status: "error",
-      message: "please provide username, email and password",
-    });
+    return next(
+      new AppError("please provide username, email and password", 400)
+    );
   }
 
   if (!validator.isEmail(email)) {
-    return res.status(400).json({
-      status: "error",
-      message: "Invalid email format",
-    });
+    return next(new AppError("Invalid email format", 400));
   }
 
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
   if (!passwordRegex.test(password)) {
-    return res.status(400).json({
-      status: "error",
-      message:
+    return next(
+      new AppError(
         "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-    });
+        400
+      )
+    );
   }
 
   const newUser = await User.create({ username, email, password });
@@ -68,26 +67,17 @@ exports.login = asyncWrapper(async function (req, res, next) {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({
-      status: "error",
-      message: "please provide email and password",
-    });
+    return next(new AppError("please provide email and password", 400));
   }
 
   if (!validator.isEmail(email)) {
-    return res.status(400).json({
-      status: "error",
-      message: "Invalid email format",
-    });
+    return next(new AppError("Invalid email format", 400));
   }
 
   const user = await User.findOne({ email }).select("+password");
 
   if (!user || !(await user.checkPassword(password))) {
-    return res.status(401).json({
-      status: "error",
-      message: "invalid email and password",
-    });
+    return next(new AppError("invalid email and password", 401));
   }
 
   user.lastSeen = new Date();
@@ -118,9 +108,7 @@ exports.protect = asyncWrapper(async function (req, res, next) {
   }
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ status: "fail", message: "please login first" });
+    return next(new AppError("please login first", 401));
   }
 
   const decoded = await jwt.verify(token, process.env.JWT_SECRET);
@@ -132,9 +120,7 @@ exports.protect = asyncWrapper(async function (req, res, next) {
   }
 
   if (!loggedUser) {
-    return res
-      .status(401)
-      .json({ status: "fail", message: "User doesn't exists" });
+    return next(new AppError("User doesn't exists", 401));
   }
 
   req.user = loggedUser;

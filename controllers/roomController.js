@@ -85,6 +85,7 @@ exports.getRoom = asyncWrapper(async function (req, res, next) {
 
 exports.deleteRoom = asyncWrapper(async function (req, res, next) {
   const room = await Room.findById(req.params.id);
+
   if (!room) {
     return next(new AppError("invalid id, Room not found", 404));
   }
