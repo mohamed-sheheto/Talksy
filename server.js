@@ -1,5 +1,12 @@
 require("dotenv").config({ quiet: true, path: "./.env" });
 
+process.on("uncaughtException", (err) => {
+  console.log("uncaught expection shutting down", err.name, err.message);
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
 const app = require("./app");
 const mongoose = require("mongoose");
 const socket = require("socket.io");
@@ -37,43 +44,11 @@ mongoose
     process.exit(1);
   });
 
-module.exports = server;
-
-const gracefulShutdown = (signal) => {
-  console.log(`${signal} received. Starting graceful shutdown...`);
-
-  if (server) {
-    server.close(() => {
-      console.log("HTTP server closed.");
-
-      mongoose.connection.close(false, () => {
-        console.log("MongoDB connection closed.");
-        process.exit(0);
-      });
-    });
-
-    setTimeout(() => {
-      console.error(
-        "Could not close connections in time, forcefully shutting down"
-      );
-      process.exit(1);
-    }, 10000);
-  } else {
-    mongoose.connection.close(false, () => {
-      console.log("MongoDB connection closed.");
-      process.exit(0);
-    });
-  }
-};
-
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
-  gracefulShutdown("uncaughtException");
-});
-
 process.on("unhandledRejection", (err) => {
-  console.error("Unhandled Rejection:", err);
-  gracefulShutdown("unhandledRejection");
+  console.log("unhandled rejction shutting down", err.name, err.message);
+  server.close(() => {
+    process.exit(1);
+  });
 });
+
+module.exports = server;
